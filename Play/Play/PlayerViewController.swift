@@ -24,6 +24,8 @@ class PlayerViewController: UIViewController {
     var artistLabel: UILabel!
     var titleLabel: UILabel!
     
+    var currURL: NSURL! = nil
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         view = UIView(frame: UIScreen.mainScreen().bounds)
@@ -115,46 +117,92 @@ class PlayerViewController: UIViewController {
         artistLabel.text = track.artist
     }
     
-    /* 
-     *  This Method should play or pause the song, depending on the song's state
-     *  It should also toggle between the play and pause images by toggling
-     *  sender.selected
-     * 
-     *  If you are playing the song for the first time, you should be creating 
-     *  an AVPlayerItem from a url and updating the player's currentitem 
-     *  property accordingly.
-     */
+    /*
+    *  This Method should play or pause the song, depending on the song's state
+    *  It should also toggle between the play and pause images by toggling
+    *  sender.selected
+    *
+    *  If you are playing the song for the first time, you should be creating
+    *  an AVPlayerItem from a url and updating the player's currentitem
+    *  property accordingly.
+    */
     func playOrPauseTrack(sender: UIButton) {
         let path = NSBundle.mainBundle().pathForResource("Info", ofType: "plist")
         let clientID = NSDictionary(contentsOfFile: path!)?.valueForKey("client_id") as! String
         let track = tracks[currentIndex]
         let url = NSURL(string: "https://api.soundcloud.com/tracks/\(track.id)/stream?client_id=\(clientID)")!
-        // FILL ME IN
-    
+        if currURL != url {
+            let currentTrack = AVPlayerItem(URL: url)
+            player = AVPlayer(playerItem: currentTrack)
+        }
+        currURL = url
+        if player.rate == 0 {
+            let currentImage = UIImage(named: "pause")?.imageWithRenderingMode(.AlwaysTemplate)
+            playPauseButton.setImage(currentImage, forState: UIControlState.Normal)
+            player.play()
+        } else {
+            let currentImage = UIImage(named: "play")?.imageWithRenderingMode(.AlwaysTemplate)
+            playPauseButton.setImage(currentImage, forState: UIControlState.Normal)
+            player.pause()
+        }
+        
     }
     
-    /* 
-     * Called when the next button is tapped. It should check if there is a next
-     * track, and if so it will load the next track's data and
-     * automatically play the song if a song is already playing
-     * Remember to update the currentIndex
-     */
-    func nextTrackTapped(sender: UIButton) {
-    
-    }
-
     /*
-     * Called when the previous button is tapped. It should behave in 2 possible
-     * ways:
-     *    a) If a song is more than 3 seconds in, seek to the beginning (time 0)
-     *    b) Otherwise, check if there is a previous track, and if so it will 
-     *       load the previous track's data and automatically play the song if
-     *      a song is already playing
-     *  Remember to update the currentIndex if necessary
-     */
-
-    func previousTrackTapped(sender: UIButton) {
+    * Called when the next button is tapped. It should check if there is a next
+    * track, and if so it will load the next track's data and
+    * automatically play the song if a song is already playing
+    * Remember to update the currentIndex
+    */
+    func nextTrackTapped(sender: UIButton) {
+        if (currentIndex < (tracks.count - 1)) {
+            currentIndex = currentIndex + 1
+            loadTrackElements()
+            let rate = player.rate
+            let path = NSBundle.mainBundle().pathForResource("Info", ofType: "plist")
+            let clientID = NSDictionary(contentsOfFile: path!)?.valueForKey("client_id") as! String
+            let track = tracks[currentIndex]
+            let url = NSURL(string: "https://api.soundcloud.com/tracks/\(track.id)/stream?client_id=\(clientID)")!
+            let currentTrack = AVPlayerItem(URL: url)
+            player = AVPlayer(playerItem: currentTrack)
+            currURL = url
+            if rate != 0 {
+                player.play()
+            }
+        }
+    }
     
+    /*
+    * Called when the previous button is tapped. It should behave in 2 possible
+    * ways:
+    *    a) If a song is more than 3 seconds in, seek to the beginning (time 0)
+    *    b) Otherwise, check if there is a previous track, and if so it will
+    *       load the previous track's data and automatically play the song if
+    *      a song is already playing
+    *  Remember to update the currentIndex if necessary
+    */
+    
+    func previousTrackTapped(sender: UIButton) {
+        let time = Int(player.currentTime().value)
+        let length = Int(player.currentTime().timescale)
+        if (time / length) > 3 || currentIndex <= 0 {
+            let restart = CMTime(seconds: 0, preferredTimescale: 1)
+            player.seekToTime(restart)
+        } else {
+            currentIndex = currentIndex - 1
+            loadTrackElements()
+            let rate = player.rate
+            let path = NSBundle.mainBundle().pathForResource("Info", ofType: "plist")
+            let clientID = NSDictionary(contentsOfFile: path!)?.valueForKey("client_id") as! String
+            let track = tracks[currentIndex]
+            let url = NSURL(string: "https://api.soundcloud.com/tracks/\(track.id)/stream?client_id=\(clientID)")!
+            let currentTrack = AVPlayerItem(URL: url)
+            player = AVPlayer(playerItem: currentTrack)
+            currURL = url
+            if rate != 0 {
+                player.play()
+            }
+        }
     }
     
     
